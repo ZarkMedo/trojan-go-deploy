@@ -3,7 +3,7 @@
 #	System Required: :Debian 9+/Ubuntu 18.04+/Centos 7+
 #	Description: Trojan&V2ray&SSR script
 #	Version: 1.0.0
-#	Author: Jeannie
+#	Author: Change the file by Jeannie
 #	Blog: https://jeanniestudio.top/
 # Official document: www.v2ray.com
 #=================================================
@@ -231,7 +231,7 @@ close_mux(){
 }
 trojan_go_info_html() {
   vps="Trojan-go"
-  wget --no-check-certificate -O ${web_dir}/trojan_go_tmpl.html https://raw.githubusercontent.com/JeannieStudio/jeannie/master/trojan_go_tmpl.html
+  wget --no-check-certificate -O ${web_dir}/trojan_go_tmpl.html https://raw.githubusercontent.com/ZarkMedo/jeannie/master/trojan_go_tmpl.html
   chmod +x ${web_dir}/trojan_go_tmpl.html
 eval "cat <<EOF
   $(<${web_dir}/trojan_go_tmpl.html)
