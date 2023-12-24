@@ -231,7 +231,7 @@ close_mux(){
 }
 trojan_go_info_html() {
   vps="Trojan-go"
-  wget --no-check-certificate -O ${web_dir}/trojan_go_tmpl.html https://raw.githubusercontent.com/ZarkMedo/jeannie/master/trojan_go_tmpl.html
+  wget --no-check-certificate -O ${web_dir}/trojan_go_tmpl.html https://raw.githubusercontent.com/ZarkMedo/trojan-go-deploy/main/trojan_go_tmpl.html
   chmod +x ${web_dir}/trojan_go_tmpl.html
 eval "cat <<EOF
   $(<${web_dir}/trojan_go_tmpl.html)

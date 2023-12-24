@@ -933,12 +933,16 @@ port_used_check() {
     fi
 }
 install_bbr() {
-  wget -N --no-check-certificate "https://raw.githubusercontent.com/chiakge/Linux-NetSpeed/master/tcp.sh"
-  chmod +x tcp.sh
-  ./tcp.sh
+  # wget -N --no-check-certificate "https://raw.githubusercontent.com/chiakge/Linux-NetSpeed/master/tcp.sh"
+  # chmod +x tcp.sh
+  # ./tcp.sh
+  # 使用最新的bbr教程
+  wget --no-check-certificate https://raw.githubusercontent.com/jinwyp/one_click_script/master/install_kernel.sh
+  chmod +x ./install_kernel.sh 
+  ./install_kernel.sh
 }
 download_trojan_mgr(){
-  curl -s -o /etc/trojan_mgr.sh https://raw.githubusercontent.com/JeannieStudio/all_install/master/trojan_mgr.sh
+  curl -s -o /etc/trojan_mgr.sh https://raw.githubusercontent.com/ZarkMedo/trojan-go-deploy/main/trojan_mgr.sh
   sucess_or_fail "修改密码、混淆密码、启用/禁用websocket、查询证书相关信息的管理脚本下载"
   chmod +x /etc/trojan_mgr.sh
 }
@@ -947,7 +951,7 @@ remove_trojan_mgr(){
 }
 trojan_go_info_html() {
   vps="Trojan-go"
-  wget --no-check-certificate -O ${web_dir}/trojan_go_tmpl.html https://raw.githubusercontent.com/JeannieStudio/jeannie/master/trojan_go_tmpl.html
+  wget --no-check-certificate -O ${web_dir}/trojan_go_tmpl.html https://raw.githubusercontent.com/ZarkMedo/trojan-go-deploy/main/trojan_go_tmpl.html
   chmod +x ${web_dir}/trojan_go_tmpl.html
 eval "cat <<EOF
   $(<${web_dir}/trojan_go_tmpl.html)
@@ -1048,7 +1052,7 @@ uninstall_all(){
 main() {
   echo -e "
 ${FUCHSIA}===================================================
-${GREEN}Trojan-go二合一脚本(authored by Jeannie)
+${GREEN}Trojan-go二合一脚本(authored by Medo)
 ${FUCHSIA}===================================================
 ${GREEN}如果已经安装了下列脚本之一，想要安装其他的，不需要单独执行卸载，直接选择想要安装脚本对应的数字即可……
 ${GREEN}因为安装的同时会执行卸载，除非想卸载干净回到初始状态,可以执行3……
