@@ -231,6 +231,10 @@ tls_generate_script_install() {
 
     curl https://get.acme.sh | sh
     sucess_or_fail "安装 tls 证书生成脚本"
+    # 创建快捷命令
+    alias acme.sh=~/.acme.sh/acme.sh
+    # 注册账号 , 你也可以切换到自己的邮箱， 但是没必要
+    acme.sh --register-account  -m youremail@email.com --server zerossl
     source ~/.bashrc
 }
 tls_generate() {
