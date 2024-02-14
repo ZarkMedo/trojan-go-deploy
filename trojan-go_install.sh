@@ -1041,6 +1041,8 @@ trojan_caddy_install(){
   trojan_go_qr_config
   trojan_go_info_html
   trojan_go_systemd
+  systemctl restart caddy.service
+  systemctl enable caddy.service
   systemctl restart trojan.service
 	systemctl enable trojan.service
 	download_trojan_mgr
