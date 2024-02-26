@@ -707,55 +707,71 @@ web_download() {
     case $aNum in
     1)
       static_website_file="intensify"
+      echo ${static_website_file}
       ;;
     2)
       static_website_file="binary"
+      echo ${static_website_file}
       ;;
     3)
       static_website_file="retrospect"
+      echo ${static_website_file}
       ;;
     4)
       static_website_file="spatial"
+      echo ${static_website_file}
       ;;
     5)
       static_website_file="monochromed"
+      echo ${static_website_file}
       ;;
     6)
       static_website_file="transit"
+      echo ${static_website_file}
       ;;
     7)
       static_website_file="interphase"
+      echo ${static_website_file}
       ;;
     8)
       static_website_file="ion"
+      echo ${static_website_file}
       ;;
     9)
       static_website_file="solarize"
+      echo ${static_website_file}
       ;;
     10)
       static_website_file="phaseshift"
+      echo ${static_website_file}
       ;;
     11)
       static_website_file="horizons"
+      echo ${static_website_file}
       ;;
     12)
       static_website_file="grassygrass"
+      echo ${static_website_file}
       ;;
     13)
       static_website_file="breadth"
+      echo ${static_website_file}
       ;;
     14)
       static_website_file="undeviating"
+      echo ${static_website_file}
       ;;
     15)
       static_website_file="lorikeet"
+      echo ${static_website_file}
       ;;
     *)
       static_website_file="intensify"
+      echo ${static_website_file}
       ;;
     esac
   done
-  wget -O ${web_dir}/web.zip --no-check-certificate https://templated.co/download.php?filename=${static_website_file}
+  wget -O ${web_dir}/web.zip --no-check-certificate "https://templated.co/download.php?filename=${static_website_file}"
   unzip -o -d ${web_dir} ${web_dir}/web.zip
   mv ${web_dir}/${static_website_file} ${web_dir}
 }
