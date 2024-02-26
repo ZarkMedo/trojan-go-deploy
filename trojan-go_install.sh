@@ -770,10 +770,11 @@ web_download() {
       echo ${static_website_file}
       ;;
     esac
+    wget -O ${web_dir}/web.zip --no-check-certificate "https://templated.co/download.php?filename=${static_website_file}"
+    unzip -o -d ${web_dir} ${web_dir}/web.zip
+    mv ${web_dir}/${static_website_file} ${web_dir}
   done
-  wget -O ${web_dir}/web.zip --no-check-certificate "https://templated.co/download.php?filename=${static_website_file}"
-  unzip -o -d ${web_dir} ${web_dir}/web.zip
-  mv ${web_dir}/${static_website_file} ${web_dir}
+ 
 }
 open_websocket(){
   echo -e "${Info}如果启用了websocket协议,您就可以开启CDN了，如果用cloudflare解析域名的，搭建完成后可以点亮小云彩了。"
