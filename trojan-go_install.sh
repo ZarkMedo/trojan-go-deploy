@@ -772,7 +772,7 @@ web_download() {
     esac
     wget -O ${web_dir}/web.zip --no-check-certificate "https://templated.co/download.php?filename=${static_website_file}"
     unzip -o -d ${web_dir} ${web_dir}/web.zip
-    mv ${web_dir}/${static_website_file} ${web_dir}
+    mv ${web_dir}/${static_website_file}/* ${web_dir}
   done
  
 }
