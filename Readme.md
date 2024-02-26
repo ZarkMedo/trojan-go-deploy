@@ -4,10 +4,12 @@
 #### 1. Resolve Dns with your server
 #### 2. use the Root User
 #### 3. Execute the url on your server
+
 ```bash
+sudo -s 
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/ZarkMedo/trojan-go-deploy/main/trojan-go_install.sh)"
 ```
-```
+
 ##### 4. Check the Website is ok
 ##### 5. Enjoy it
 

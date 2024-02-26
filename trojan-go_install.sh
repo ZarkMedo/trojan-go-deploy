@@ -43,6 +43,7 @@ nginx_version="1.18.0"
 openssl_version="1.1.1g"
 jemalloc_version="5.2.1"
 old_config_status="off"
+static_website_file="intensify"
 check_root() {
   [[ $EUID != 0 ]] && echo -e "${Error} ${RedBG} 当前非ROOT账号(或没有ROOT权限)，无法继续操作，请执行命令 ${Green_background_prefix}sudo -i${Font_color_suffix} 更换ROOT账号" && exit 1
 }
@@ -705,56 +706,59 @@ web_download() {
     read -rp "$(echo -e "${Tip}请输入你要下载的网站的数字:")" aNum
     case $aNum in
     1)
-      wget -O ${web_dir}/web.zip --no-check-certificate https://templated.co/download.php?filename=intensify
+      static_website_file="intensify"
       ;;
     2)
-      wget -O ${web_dir}/web.zip --no-check-certificate https://templated.co/download.php?filename=binary
+      static_website_file="binary"
       ;;
     3)
-      wget -O ${web_dir}/web.zip --no-check-certificate https://templated.co/download.php?filename=retrospect
+      static_website_file="retrospect"
       ;;
     4)
-      wget -O ${web_dir}/web.zip --no-check-certificate https://templated.co/download.php?filename=spatial
+      static_website_file="spatial"
       ;;
     5)
-      wget -O ${web_dir}/web.zip --no-check-certificate https://templated.co/download.php?filename=monochromed
+      static_website_file="monochromed"
       ;;
     6)
-      wget -O ${web_dir}/web.zip --no-check-certificate https://templated.co/download.php?filename=transit
+      static_website_file="transit"
       ;;
     7)
-      wget -O ${web_dir}/web.zip --no-check-certificate https://templated.co/download.php?filename=interphase
+      static_website_file="interphase"
       ;;
     8)
-      wget -O ${web_dir}/web.zip --no-check-certificate https://templated.co/download.php?filename=ion
+      static_website_file="ion"
       ;;
     9)
-      wget -O ${web_dir}/web.zip --no-check-certificate https://templated.co/download.php?filename=solarize
+      static_website_file="solarize"
       ;;
     10)
-      wget -O ${web_dir}/web.zip --no-check-certificate https://templated.co/download.php?filename=phaseshift
+      static_website_file="phaseshift"
       ;;
     11)
-      wget -O ${web_dir}/web.zip --no-check-certificate https://templated.co/download.php?filename=horizons
+      static_website_file="horizons"
       ;;
     12)
-      wget -O ${web_dir}/web.zip --no-check-certificate https://templated.co/download.php?filename=grassygrass
+      static_website_file="grassygrass"
       ;;
     13)
-      wget -O ${web_dir}/web.zip --no-check-certificate https://templated.co/download.php?filename=breadth
+      static_website_file="breadth"
       ;;
     14)
-      wget -O ${web_dir}/web.zip --no-check-certificate https://templated.co/download.php?filename=undeviating
+      static_website_file="undeviating"
       ;;
     15)
-      wget -O ${web_dir}/web.zip --no-check-certificate https://templated.co/download.php?filename=lorikeet
+      static_website_file="lorikeet"
       ;;
     *)
-      wget -O ${web_dir}/web.zip --no-check-certificate https://templated.co/download.php?filename=intensify
+      static_website_file="intensify"
       ;;
     esac
   done
+  wget -O ${web_dir}/web.zip --no-check-certificate https://templated.co/download.php?filename=${static_website_file}
+      ;;
   unzip -o -d ${web_dir} ${web_dir}/web.zip
+  mv ${web_dir}/${static_website_file} ${web_dir}
 }
 open_websocket(){
   echo -e "${Info}如果启用了websocket协议,您就可以开启CDN了，如果用cloudflare解析域名的，搭建完成后可以点亮小云彩了。"
