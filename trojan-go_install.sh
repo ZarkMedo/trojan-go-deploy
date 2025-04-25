@@ -126,8 +126,6 @@ install_dependency() {
   sucess_or_fail "git安装"
   ${cmd} -y install lsof
   sucess_or_fail "lsof安装"
-  ${cmd} -y install netcat-traditional
-  sucess_or_fail "netcat安装"
   if [[ ${cmd} == "yum" ]]; then
     yum -y install crontabs
   else
@@ -228,7 +226,7 @@ tls_generate_script_install() {
     if [[ "${cmd}" == "yum" ]]; then
         ${cmd} install socat nc -y
     else
-        ${cmd} install socat netcat -y
+        ${cmd} install socat netcat-traditional -y
     fi
     sucess_or_fail "安装 tls 证书生成脚本依赖"
 
