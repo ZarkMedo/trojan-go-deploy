@@ -1053,12 +1053,14 @@ install_bbr() {
   ./install_kernel.sh
 }
 download_trojan_mgr(){
-  curl -s -o /etc/trojan_mgr.sh https://raw.githubusercontent.com/ZarkMedo/trojan-go-deploy/main/trojan_mgr.sh
-  sucess_or_fail "修改密码、混淆密码、启用/禁用websocket、查询证书相关信息的管理脚本下载"
-  chmod +x /etc/trojan_mgr.sh
+  cd /usr/local/bin || exit
+  wget -N --no-check-certificate https://raw.githubusercontent.com/ZarkMedo/trojan-go-deploy/main/trojan_mgr.sh
+  chmod +x trojan_mgr.sh
+  ln -sf /usr/local/bin/trojan_mgr.sh /usr/local/bin/trojan
+  sucess_or_fail "Trojan-Go管理脚本下载"
 }
 remove_trojan_mgr(){
-  [[ -f /etc/trojan_mgr.sh ]] && rm -f /etc/trojan_mgr.sh && echo -e "${Info}trojan_mgr.sh删除成功"
+  [[ -f /usr/local/bin/trojan_mgr.sh ]] && rm -f /usr/local/bin/trojan_mgr.sh && echo -e "${Info}trojan_mgr.sh删除成功"
 }
 trojan_go_info_html() {
   vps="Trojan-go"

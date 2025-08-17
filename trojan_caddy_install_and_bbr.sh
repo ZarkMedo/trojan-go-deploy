@@ -143,9 +143,13 @@ install_dependency() {
 }
 
 close_firewall() {
-  systemctl stop firewalld.service
-  systemctl disable firewalld.service
-  echo -e "${Info} firewalld 已关闭 ${Font}"
+  if systemctl status firewalld &>/dev/null; then
+    systemctl stop firewalld.service
+    systemctl disable firewalld.service
+    echo -e "${Info} firewalld 已关闭 ${Font}"
+  else
+    echo -e "${Info} firewalld 服务未安装，无需关闭 ${Font}"
+  fi
 }
 
 open_port() {
@@ -827,13 +831,18 @@ EOF
 
 # 显示Trojan-Go基本信息
 trojan_go_basic_information() {
+  # 确保使用全局变量
+  local show_domain=${domain}
+  local show_port=${trojanport}
+  local show_password=${password}
+  
   echo -e "\n${GREEN}Trojan-Go 安装成功！${Font}"
   echo -e "${GREEN}==================================${Font}"
-  echo -e "${GREEN}域名: ${domain}${Font}"
-  echo -e "${GREEN}端口: ${trojanport}${Font}"
-  echo -e "${GREEN}密码: ${password}${Font}"
+  echo -e "${GREEN}域名: ${show_domain}${Font}"
+  echo -e "${GREEN}端口: ${show_port}${Font}"
+  echo -e "${GREEN}密码: ${show_password}${Font}"
   echo -e "${GREEN}==================================${Font}"
-  echo -e "${GREEN}信息页面: https://${domain}/trojan.html${Font}"
+  echo -e "${GREEN}信息页面: https://${show_domain}/trojan.html${Font}"
   echo -e "${GREEN}配置文件: ${trojan_conf_file}${Font}"
   echo -e "${GREEN}==================================${Font}"
 }
