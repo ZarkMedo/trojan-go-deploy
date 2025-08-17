@@ -890,6 +890,7 @@ main() {
     # 参数1: 域名
     domain=$1
     check_domain "${domain}"
+    echo -e "${Info}域名: ${domain}"
     
     # 参数2: Caddy端口，如果为0则随机生成
     if [ -n "$2" ]; then
