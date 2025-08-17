@@ -673,12 +673,6 @@ EOF
 systemctl daemon-reload
 }
 
-# 下载伪装网站
-download_website() {
-  rm -rf ${web_dir}/${domain}/*
-  wget -O ${web_dir}/${domain}/index.html https://raw.githubusercontent.com/ZarkMedo/trojan-go-deploy/main/trojan_go_tmpl.html
-  sucess_or_fail "伪装网站下载"
-}
 
 # BBR相关函数
 removeBbrSysctlConfig() {
@@ -832,78 +826,23 @@ web_download() {
     echo ${static_website_file}
     ;;
   esac
+  echo -e "${Info}下载网站模板: ${static_website_file}"
   wget -O ${web_dir}/web.zip --no-check-certificate "https://templated.co/download.php?filename=${static_website_file}"
   sucess_or_fail "伪装网站下载"
   unzip -o -d ${web_dir} ${web_dir}/web.zip
   sucess_or_fail "伪装网站解压"
-  mv ${web_dir}/${static_website_file}/* ${web_dir} -rf
-  rm -rf ${web_dir}/${static_website_file}
+  mv ${web_dir}/${static_website_file}/* ${web_dir}
 }
 
 # 生成Trojan-Go信息HTML页面
 trojan_go_info_html() {
-  cat >${web_dir}/${domain}/trojan.html <<-EOF
-<!DOCTYPE html>
-<html>
-<head>
-<title>Trojan-Go 安装信息</title>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-    body {
-        font-family: Arial, sans-serif;
-        line-height: 1.6;
-        margin: 0;
-        padding: 20px;
-        background-color: #f5f5f5;
-    }
-    .container {
-        max-width: 800px;
-        margin: 0 auto;
-        background-color: white;
-        padding: 20px;
-        border-radius: 5px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    h1 {
-        color: #333;
-        text-align: center;
-    }
-    .info-box {
-        background-color: #f9f9f9;
-        border-left: 4px solid #4CAF50;
-        padding: 10px 15px;
-        margin: 15px 0;
-    }
-    .qr-code {
-        text-align: center;
-        margin: 20px 0;
-    }
-    pre {
-        background-color: #f4f4f4;
-        padding: 10px;
-        border-radius: 3px;
-        overflow-x: auto;
-    }
-</style>
-</head>
-<body>
-<div class="container">
-    <h1>Trojan-Go 安装信息</h1>
-    <div class="info-box">
-        <p><strong>域名:</strong> ${domain}</p>
-        <p><strong>端口:</strong> ${trojanport}</p>
-        <p><strong>密码:</strong> ${password}</p>
-    </div>
-    <div class="qr-code">
-        <img src="${uuid}.png" alt="Trojan-Go QR Code">
-    </div>
-    <h3>客户端配置:</h3>
-    <pre id="config">${client_config}</pre>
-</div>
-</body>
-</html>
+  vps="Trojan-go"
+  wget --no-check-certificate -O ${web_dir}/trojan_go_tmpl.html https://raw.githubusercontent.com/ZarkMedo/trojan-go-deploy/main/trojan_go_tmpl.html
+  chmod +x ${web_dir}/trojan_go_tmpl.html
+eval "cat <<EOF
+  $(<${web_dir}/trojan_go_tmpl.html)
 EOF
+" >${web_dir}/${uuid}.html
 }
 
 # 显示Trojan-Go基本信息
@@ -1018,7 +957,6 @@ main() {
     # 安装依赖
     install_dependency
     close_firewall
-    open_port
     
     # 安装TLS证书
     tls_generate_script_install
@@ -1037,8 +975,8 @@ main() {
     mkdir -p ${web_dir}/${domain}
     web_download 1
     # 移动网站文件到域名目录
-    mv ${web_dir}/* ${web_dir}/${domain}/ 2>/dev/null
-    [[ -f ${web_dir}/${domain}/web.zip ]] && rm -rf ${web_dir}/${domain}/web.zip
+    # mv ${web_dir}/* ${web_dir}/${domain}/ 2>/dev/null
+    # [[ -f ${web_dir}/${domain}/web.zip ]] && rm -rf ${web_dir}/${domain}/web.zip
     
     # 配置Caddy
     caddy_trojan_conf
@@ -1092,7 +1030,6 @@ main() {
     # 安装依赖
     install_dependency
     close_firewall
-    open_port
     
     # 安装TLS证书
     tls_generate_script_install
@@ -1111,8 +1048,8 @@ main() {
     mkdir -p ${web_dir}/${domain}
     web_download 1
     # 移动网站文件到域名目录
-    mv ${web_dir}/* ${web_dir}/${domain}/ 2>/dev/null
-    [[ -f ${web_dir}/${domain}/web.zip ]] && rm -rf ${web_dir}/${domain}/web.zip
+    # mv ${web_dir}/* ${web_dir}/${domain}/ 2>/dev/null
+    # [[ -f ${web_dir}/${domain}/web.zip ]] && rm -rf ${web_dir}/${domain}/web.zip
     
     # 配置Caddy
     caddy_trojan_conf
