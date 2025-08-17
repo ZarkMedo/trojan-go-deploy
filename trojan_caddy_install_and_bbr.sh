@@ -831,20 +831,19 @@ EOF
 
 # 显示Trojan-Go基本信息
 trojan_go_basic_information() {
-  # 确保使用全局变量
-  local show_domain=${domain}
-  local show_port=${trojanport}
-  local show_password=${password}
-  
-  echo -e "\n${GREEN}Trojan-Go 安装成功！${Font}"
-  echo -e "${GREEN}==================================${Font}"
-  echo -e "${GREEN}域名: ${show_domain}${Font}"
-  echo -e "${GREEN}端口: ${show_port}${Font}"
-  echo -e "${GREEN}密码: ${show_password}${Font}"
-  echo -e "${GREEN}==================================${Font}"
-  echo -e "${GREEN}信息页面: https://${show_domain}/trojan.html${Font}"
-  echo -e "${GREEN}配置文件: ${trojan_conf_file}${Font}"
-  echo -e "${GREEN}==================================${Font}"
+  {
+echo -e "
+${GREEN}=========================Trojan-go+tls 安装成功==============================
+${FUCHSIA}=========================   Trojan-go 配置信息  =============================
+${GREEN}地址：              ${domain}
+${GREEN}端口：              ${trojanport}
+${GREEN}密码：              ${password}
+${GREEN}websocket状态：     ${websocket_status}
+${GREEN}websocket路径：     ${websocket_path}
+${GREEN}多路复用：          ${mux_status}
+${FUCHSIA}=========================   客户端配置文件  ==========================================
+${GREEN}详细信息: https://${domain}:${webport}/${uuid}.html${NO_COLOR}"
+} | tee /etc/motd
 }
 
 # 下载trojan_mgr管理脚本
@@ -871,6 +870,16 @@ uninstall_all() {
   remove_trojan_mgr
   rm -rf ${web_dir}
   echo -e "${Info}卸载完成！"
+}
+
+open_websocket(){
+  sed -i "53c    \"enabled\": true," ${trojan_conf_file}
+  sed -i "53c    \"enabled\": true," ${web_dir}/"${uuid}".json
+  sed -i "54c    \"path\": \"/trojan\"," ${trojan_conf_file}
+  sed -i "54c    \"path\": \"/trojan\"," ${web_dir}/"${uuid}".json
+  websocket_path="/trojan"
+  websocket_status="开启"
+  ;;
 }
 
 # 主函数
@@ -902,13 +911,16 @@ main() {
     else
       caddy_trojan_port=80
     fi
+    echo -e "${Info}参数2: Caddy端口=> caddy_trojan_port: ${caddy_trojan_port}"
     
     # 参数3: Trojan端口
     if [ -n "$3" ]; then
       trojanport=$3
     else
-      trojanport=443
+      trojanport=$(shuf -i 10000-65000 -n 1)
+        echo -e "${Info}随机生成trojan端口: ${trojanport}"
     fi
+    echo -e "${Info}参数3: Trojan端口=> trojanport: ${trojanport}"
     
     # 参数4: 密码
     if [ -n "$4" ]; then
@@ -917,6 +929,7 @@ main() {
       password=$(cat /dev/urandom | head -1 | md5sum | head -c 8)
       echo -e "${Info}随机生成密码: ${password}"
     fi
+    echo -e "${Info}参数4: 密码=> password: ${password}"
     
     webport=$caddy_trojan_port
     
@@ -1025,6 +1038,7 @@ main() {
     # 生成客户端配置
     client_config=$(cat ${trojan_conf_file} | sed 's/\n/\\n/g')
     trojan_client_conf
+    open_websocket
     trojan_go_qr_config
     
     # 生成二维码
