@@ -1,6 +1,6 @@
 #!/bin/bash
 #=================================================
-#	System Required: :Debian 9+/Ubuntu 18.04+/Centos 7+
+#	System Required: Debian 9+/Ubuntu 18.04+/Centos 7+
 #	Description: Trojan&V2ray&SSR script
 #	Version: 1.0.0
 #	Author: Jeannie
@@ -44,6 +44,7 @@ openssl_version="1.1.1g"
 jemalloc_version="5.2.1"
 old_config_status="off"
 static_website_file="intensify"
+
 check_root() {
   [[ $EUID != 0 ]] && echo -e "${Error} ${RedBG} 当前非ROOT账号(或没有ROOT权限)，无法继续操作，请执行命令 ${Green_background_prefix}sudo -i${Font_color_suffix} 更换ROOT账号" && exit 1
 }
@@ -193,24 +194,43 @@ get_ip() {
   [[ -z ${local_ip} ]] && echo -e "${Error}获取不到你vps的ip地址" && exit
 }
 check_domain() {
-  read -rp "请输入您的域名(如果用Cloudflare解析域名，请点击小云彩使其变灰):" domain
-  real_ip=$(ping "${domain}" -c 1 | sed '1{s/[^(]*(//;s/).*//;q}')
-  while [ "${real_ip}" != "${local_ip}" ]; do
-    read -rp "本机IP和域名绑定的IP不一致，请检查域名是否解析成功,并重新输入域名:" domain
-    real_ip=$(ping ${domain} -c 1 | sed '1{s/[^(]*(//;s/).*//;q}')
-    read -rp "我已人工确认，本机Ip和域名绑定的IP一致，继续安装（Y/n）？（默认:n）" continue_install
-    [[ -z ${continue_install} ]] && continue_install="n"
-    case ${continue_install} in
-    [yY][eE][sS] | [yY])
+  if [ -n "$1" ]; then
+    domain="$1"
+    real_ip=$(ping "${domain}" -c 1 | sed '1{s/[^(]*(//;s/).*//;q}')
+    if [ "${real_ip}" != "${local_ip}" ]; then
+      echo -e "${Error} 本机IP(${local_ip})和域名(${domain})绑定的IP(${real_ip})不一致，请检查域名解析"
+      read -rp "我已人工确认，本机IP和域名绑定的IP一致，继续安装（Y/n）？（默认:n）" continue_install
+      [[ -z ${continue_install} ]] && continue_install="n"
+      case ${continue_install} in
+      [yY][eE][sS] | [yY])
         echo -e "${Tip} 继续安装"
-        break
         ;;
-    *)
+      *)
         echo -e "${Tip} 安装终止"
         exit 2
         ;;
-    esac
-  done
+      esac
+    fi
+  else
+    read -rp "请输入您的域名(如果用Cloudflare解析域名，请点击小云彩使其变灰):" domain
+    real_ip=$(ping "${domain}" -c 1 | sed '1{s/[^(]*(//;s/).*//;q}')
+    while [ "${real_ip}" != "${local_ip}" ]; do
+      read -rp "本机IP和域名绑定的IP不一致，请检查域名是否解析成功,并重新输入域名:" domain
+      real_ip=$(ping ${domain} -c 1 | sed '1{s/[^(]*(//;s/).*//;q}')
+      read -rp "我已人工确认，本机Ip和域名绑定的IP一致，继续安装（Y/n）？（默认:n）" continue_install
+      [[ -z ${continue_install} ]] && continue_install="n"
+      case ${continue_install} in
+      [yY][eE][sS] | [yY])
+        echo -e "${Tip} 继续安装"
+        break
+        ;;
+      *)
+        echo -e "${Tip} 安装终止"
+        exit 2
+        ;;
+      esac
+    done
+  fi
 }
 check_caddy_installed_status() {
   if [[ -d ${caddy_bin_dir} ]] && [[ -d ${caddy_conf} ]]; then
@@ -454,31 +474,55 @@ trojan_info_extraction() {
   grep "$1" ${trojan_conf_file} | awk -F '"' '{print $4}'
 }
 set_port() {
+  if [ -n "$1" ]; then
+    port="$1"
+    if [ "$port" -eq "0" ]; then
+      port=$(shuf -i 10000-60000 -n 1)
+      echo -e "${Info}随机$2端口：$port"
+    else
+      expr "$port" + 1 &>/dev/null
+      if [ $? -eq 0 ] && [ "$port" -ge 1 ] && [ "$port" -le 65535 ] && [ "$port" != 0 ]; then
+        echo -e "${Info}$2端口是：$port"
+      else
+        echo -e "${Error} 无效的$2端口: $port，必须是0（随机10000-60000）或1-65535"
+        exit 1
+      fi
+    fi
+  else
     while true
     do
-    dport=$(shuf -i 9000-19999 -n 1)
-    echo -e "${Info}请输入$1端口号 [1-65535],注意：如果安装了v2ray、caddy、trojan、ssr等服务，请不要与这些服务的端口号重复"
-    read -rp "(默认端口: ${dport}):" port
-    [ -z "$port" ] && port=${dport}
-    expr "$port" + 1 &>/dev/null
-    if [ $? -eq 0 ]; then
+      dport=$(shuf -i 9000-19999 -n 1)
+      echo -e "${Info}请输入$2端口号 [1-65535],注意：如果安装了v2ray、caddy、trojan、ssr等服务，请不要与这些服务的端口号重复"
+      read -rp "(默认端口: ${dport}):" port
+      [ -z "$port" ] && port=${dport}
+      expr "$port" + 1 &>/dev/null
+      if [ $? -eq 0 ]; then
         if [ "$port" -ge 1 ] && [ "$port" -le 65535 ] && [ "$port" != 0 ]; then
-            echo
-            echo -e "${Info}$1端口是：$port"
-            echo
-            break
+          echo
+          echo -e "${Info}$2端口是：$port"
+          echo
+          break
         fi
-    fi
-    echo -e "${Error} 请输入一个正确的端口[1-65535]"
+      fi
+      echo -e "${Error} 请输入一个正确的端口[1-65535]"
     done
+  fi
 }
 trojan_go_conf(){
   [[ ! -d ${trojan_conf_dir} ]] && mkdir ${trojan_conf_dir}
   touch ${trojan_conf_file}
-  read -rp "$(echo -e "${Info}请输入您的Trojan-go密码:")" password
-  while [[ -z ${password} ]]; do
-    read -rp "$(echo -e "${Tip}密码不能为空,请重新输入您的Trojan-go密码:")" password
-  done
+  if [ -n "$1" ]; then
+    password="$1"
+    if [[ -z ${password} ]]; then
+      echo -e "${Error} 密码不能为空"
+      exit 1
+    fi
+  else
+    read -rp "$(echo -e "${Info}请输入您的Trojan-go密码:")" password
+    while [[ -z ${password} ]]; do
+      read -rp "$(echo -e "${Tip}密码不能为空,请重新输入您的Trojan-go密码:")" password
+    done
+  fi
   cat >${trojan_conf_file} <<EOF
   {
   "run_type": "server",
@@ -686,7 +730,13 @@ EOF
 }
 web_download() {
   [[ ! -d "${web_dir}" ]] && mkdir "${web_dir}"
-  while [[ ! -f "${web_dir}/web.zip" ]]; do
+  if [ -n "$1" ]; then
+    aNum="$1"
+    if [ "$aNum" -eq "0" ]; then
+      aNum=$(shuf -i 1-15 -n 1)
+      echo -e "${Info}随机选择网站模板编号: $aNum"
+    fi
+  else
     echo -e "${Tip}伪装网站未下载或下载失败,请选择下面的任意一个进行下载:
       ${Info}1. https://templated.co/intensify
       ${Info}2. https://templated.co/binary
@@ -704,81 +754,83 @@ web_download() {
       ${Info}14. https://templated.co/undeviating
       ${Info}15. https://templated.co/lorikeet"
     read -rp "$(echo -e "${Tip}请输入你要下载的网站的数字:")" aNum
-    case $aNum in
-    1)
-      static_website_file="intensify"
-      echo ${static_website_file}
-      ;;
-    2)
-      static_website_file="binary"
-      echo ${static_website_file}
-      ;;
-    3)
-      static_website_file="retrospect"
-      echo ${static_website_file}
-      ;;
-    4)
-      static_website_file="spatial"
-      echo ${static_website_file}
-      ;;
-    5)
-      static_website_file="monochromed"
-      echo ${static_website_file}
-      ;;
-    6)
-      static_website_file="transit"
-      echo ${static_website_file}
-      ;;
-    7)
-      static_website_file="interphase"
-      echo ${static_website_file}
-      ;;
-    8)
-      static_website_file="ion"
-      echo ${static_website_file}
-      ;;
-    9)
-      static_website_file="solarize"
-      echo ${static_website_file}
-      ;;
-    10)
-      static_website_file="phaseshift"
-      echo ${static_website_file}
-      ;;
-    11)
-      static_website_file="horizons"
-      echo ${static_website_file}
-      ;;
-    12)
-      static_website_file="grassygrass"
-      echo ${static_website_file}
-      ;;
-    13)
-      static_website_file="breadth"
-      echo ${static_website_file}
-      ;;
-    14)
-      static_website_file="undeviating"
-      echo ${static_website_file}
-      ;;
-    15)
-      static_website_file="lorikeet"
-      echo ${static_website_file}
-      ;;
-    *)
-      static_website_file="intensify"
-      echo ${static_website_file}
-      ;;
-    esac
-    wget -O ${web_dir}/web.zip --no-check-certificate "https://templated.co/download.php?filename=${static_website_file}"
-    unzip -o -d ${web_dir} ${web_dir}/web.zip
-    mv ${web_dir}/${static_website_file}/* ${web_dir}
-  done
- 
+  fi
+  case $aNum in
+  1)
+    static_website_file="intensify"
+    echo ${static_website_file}
+    ;;
+  2)
+    static_website_file="binary"
+    echo ${static_website_file}
+    ;;
+  3)
+    static_website_file="retrospect"
+    echo ${static_website_file}
+    ;;
+  4)
+    static_website_file="spatial"
+    echo ${static_website_file}
+    ;;
+  5)
+    static_website_file="monochromed"
+    echo ${static_website_file}
+    ;;
+  6)
+    static_website_file="transit"
+    echo ${static_website_file}
+    ;;
+  7)
+    static_website_file="interphase"
+    echo ${static_website_file}
+    ;;
+  8)
+    static_website_file="ion"
+    echo ${static_website_file}
+    ;;
+  9)
+    static_website_file="solarize"
+    echo ${static_website_file}
+    ;;
+  10)
+    static_website_file="phaseshift"
+    echo ${static_website_file}
+    ;;
+  11)
+    static_website_file="horizons"
+    echo ${static_website_file}
+    ;;
+  12)
+    static_website_file="grassygrass"
+    echo ${static_website_file}
+    ;;
+  13)
+    static_website_file="breadth"
+    echo ${static_website_file}
+    ;;
+  14)
+    static_website_file="undeviating"
+    echo ${static_website_file}
+    ;;
+  15)
+    static_website_file="lorikeet"
+    echo ${static_website_file}
+    ;;
+  *)
+    static_website_file="intensify"
+    echo ${static_website_file}
+    ;;
+  esac
+  wget -O ${web_dir}/web.zip --no-check-certificate "https://templated.co/download.php?filename=${static_website_file}"
+  sucess_or_fail "伪装网站下载"
+  unzip -o -d ${web_dir} ${web_dir}/web.zip
+  sucess_or_fail "伪装网站解压"
+  mv ${web_dir}/${static_website_file}/* ${web_dir}
 }
 open_websocket(){
-  echo -e "${Info}如果启用了websocket协议,您就可以开启CDN了，如果用cloudflare解析域名的，搭建完成后可以点亮小云彩了。"
-  read -rp "$(echo -e "${Info}是否开启（Y/n）？（默认：n）")" Yn
+  if [ -n "$1" ]; then
+    Yn="$1"
+    [[ -z ${Yn} ]] && Yn="n"
     case ${Yn} in
     [yY][eE][sS] | [yY])
         sed -i "53c    \"enabled\": true," ${trojan_conf_file}
@@ -793,10 +845,30 @@ open_websocket(){
         websocket_path=""
         ;;
     esac
+  else
+    echo -e "${Info}如果启用了websocket协议,您就可以开启CDN了，如果用cloudflare解析域名的，搭建完成后可以点亮小云彩了。"
+    read -rp "$(echo -e "${Info}是否开启（Y/n）？（默认：n）")" Yn
+    [[ -z ${Yn} ]] && Yn="n"
+    case ${Yn} in
+    [yY][eE][sS] | [yY])
+        sed -i "53c    \"enabled\": true," ${trojan_conf_file}
+        sed -i "53c    \"enabled\": true," ${web_dir}/"${uuid}".json
+        sed -i "54c    \"path\": \"/trojan\"," ${trojan_conf_file}
+        sed -i "54c    \"path\": \"/trojan\"," ${web_dir}/"${uuid}".json
+        websocket_path="/trojan"
+        websocket_status="开启"
+        ;;
+    *)
+        websocket_status="关闭"
+        websocket_path=""
+        ;;
+    esac
+  fi
 }
 open_mux(){
-  echo -e "${Info}是否启用多路复用?注意：开启这个选项不会改善你的链路速度（甚至有可能下降）"
-  read -rp "$(echo -e "${Info}是否开启（Y/n）？（默认：n）")" Yn
+  if [ -n "$1" ]; then
+    Yn="$1"
+    [[ -z ${Yn} ]] && Yn="n"
     case ${Yn} in
     [yY][eE][sS] | [yY])
         sed -i "38c    \"enabled\": true," ${trojan_conf_file}
@@ -807,6 +879,21 @@ open_mux(){
         mux_status="关闭"
         ;;
     esac
+  else
+    echo -e "${Info}是否启用多路复用?注意：开启这个选项不会改善你的链路速度（甚至有可能下降）"
+    read -rp "$(echo -e "${Info}是否开启（Y/n）？（默认：n）")" Yn
+    [[ -z ${Yn} ]] && Yn="n"
+    case ${Yn} in
+    [yY][eE][sS] | [yY])
+        sed -i "38c    \"enabled\": true," ${trojan_conf_file}
+        sed -i "38c    \"enabled\": true," ${web_dir}/"${uuid}".json
+        mux_status="开启"
+        ;;
+    *)
+        mux_status="关闭"
+        ;;
+    esac
+  fi
 }
 trojan_go_basic_information() {
   {
@@ -889,7 +976,6 @@ install_caddy() {
     else
       echo -e "${Info}trojan-go已存在，无需安装"
     fi
-
 }
 install_caddy_service(){
   echo -e "${Info}开始安装caddy后台管理服务……"
@@ -996,33 +1082,33 @@ trojan_nginx_install(){
   port_used_check 80
   port_used_check 443
   get_ip
-  check_domain
+  check_domain "$2"
   tls_generate_script_install
   tls_generate
-  web_download
+  web_download "$3"
   install_nginx
   nginx_systemd
   systemctl daemon-reload
-  set_port nginx
+  set_port "$4" nginx
   webport=$port
   port_used_check "${webport}"
   nginx_trojan_conf
   systemctl restart nginx
   systemctl enable nginx
   download_install
-  set_port trojan
+  set_port "$5" trojan
   trojanport=$port
   port_used_check "${trojanport}"
-  trojan_go_conf
+  trojan_go_conf "$6"
   trojan_client_conf
-  open_websocket
-  open_mux
+  open_websocket "$7"
+  open_mux "$8"
   trojan_go_qr_config
   trojan_go_info_html
   trojan_go_systemd
   systemctl restart trojan.service
-	systemctl enable trojan.service
-	download_trojan_mgr
+  systemctl enable trojan.service
+  download_trojan_mgr
   trojan_go_basic_information
 }
 trojan_caddy_install(){
@@ -1038,12 +1124,12 @@ trojan_caddy_install(){
   port_used_check 443
   uninstall_nginx
   get_ip
-  check_domain
+  check_domain "$2"
   tls_generate_script_install
   tls_generate
-  web_download
+  web_download "$3"
   install_caddy
-  set_port caddy
+  set_port "$4" caddy
   webport=$port
   port_used_check "${webport}"
   caddy_trojan_conf
@@ -1051,21 +1137,21 @@ trojan_caddy_install(){
   systemctl restart caddy
   systemctl restart caddy
   download_install
-  set_port trojan
+  set_port "$5" trojan
   trojanport=$port
   port_used_check "${trojanport}"
-  trojan_go_conf
+  trojan_go_conf "$6"
   trojan_client_conf
-  open_websocket
-  open_mux
+  open_websocket "$7"
+  open_mux "$8"
   trojan_go_qr_config
   trojan_go_info_html
   trojan_go_systemd
   systemctl restart caddy.service
   systemctl enable caddy.service
   systemctl restart trojan.service
-	systemctl enable trojan.service
-	download_trojan_mgr
+  systemctl enable trojan.service
+  download_trojan_mgr
   trojan_go_basic_information
 }
 uninstall_all(){
@@ -1077,7 +1163,31 @@ uninstall_all(){
   echo -e "${Info}卸载完成，系统回到初始状态！"
 }
 main() {
-  echo -e "
+  if [ $# -gt 0 ]; then
+    menu_num="$1"
+    case $menu_num in
+    1)
+      trojan_nginx_install "$@"
+      ;;
+    2)
+      trojan_caddy_install "$@"
+      ;;
+    3)
+      uninstall_all
+      ;;
+    4)
+      install_bbr
+      ;;
+    0)
+      exit 0
+      ;;
+    *)
+      echo -e "${RedBG}无效的参数: $menu_num，请使用 0, 1, 2, 3 或 4${Font}"
+      exit 1
+      ;;
+    esac
+  else
+    echo -e "
 ${FUCHSIA}===================================================
 ${GREEN}Trojan-go二合一脚本(authored by Medo)
 ${FUCHSIA}===================================================
@@ -1093,26 +1203,28 @@ ${FUCHSIA}===================================================
 ${GREEN}4. 安装BBR加速
 ${FUCHSIA}===================================================
 ${GREEN}0. 啥也不做，退出${NO_COLOR}"
-  read -rp "请输入数字：" menu_num
-  case $menu_num in
-  1)
-    trojan_nginx_install
-    ;;
-  2)
-    trojan_caddy_install
-    ;;
-  3)
-    uninstall_all
-    ;;
-  4)
-    install_bbr
-    ;;
-  0)
-    exit 0
-    ;;
-  *)
-    echo -e "${RedBG}请输入正确的数字${Font}"
-    ;;
-  esac
+    read -rp "请输入数字：" menu_num
+    case $menu_num in
+    1)
+      trojan_nginx_install
+      ;;
+    2)
+      trojan_caddy_install
+      ;;
+    3)
+      uninstall_all
+      ;;
+    4)
+      install_bbr
+      ;;
+    0)
+      exit 0
+      ;;
+    *)
+      echo -e "${RedBG}请输入正确的数字${Font}"
+      exit 1
+      ;;
+    esac
+  fi
 }
-main
+main "$@"
