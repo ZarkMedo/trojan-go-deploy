@@ -152,6 +152,21 @@ close_firewall() {
   fi
 }
 
+port_used_check() {
+    if [[ 0 -eq $(lsof -i:"$1" | grep -i -c "listen") ]]; then
+        echo -e "${Info} $1 端口未被占用"
+        sleep 1
+    else
+        echo -e "${Error}检测到 $1 端口被占用，以下为 $1 端口占用信息 ${Font}"
+        lsof -i:"$1"
+        echo -e "${Info} 5s 后将尝试自动 kill 占用进程 "
+        sleep 5
+        lsof -i:"$1" | awk '{print $2}' | grep -v "PID" | xargs kill -9
+        echo -e "${Info} kill 完成"
+        sleep 1
+    fi
+}
+
 open_port() {
   if [[ ${release} != "centos" ]]; then
     iptables -I INPUT -m state --state NEW -m tcp -p tcp --dport 80 -j ACCEPT
@@ -202,100 +217,78 @@ check_domain() {
 
 # 安装Caddy
 install_caddy() {
-  echo -e "${Info}开始安装caddy……"
-  [[ ! -d ${caddy_bin_dir} ]] && mkdir ${caddy_bin_dir}
-  if [[ ! -f ${caddy_bin_dir}/caddy ]];then
-    case  ${bit} in
-    "x86_64")
-      wget --no-check-certificate -O ${caddy_bin_dir}/caddy https://github.com/caddyserver/caddy/releases/download/v1.0.4/caddy_v1.0.4_linux_amd64
-      sucess_or_fail "caddy下载"
-      ;;    
-    "i386" | "i686")
-      wget --no-check-certificate -O ${caddy_bin_dir}/caddy https://github.com/caddyserver/caddy/releases/download/v1.0.4/caddy_v1.0.4_linux_386
-      sucess_or_fail "caddy下载"
-      ;;    
-    "armv7l")
-      wget --no-check-certificate -O ${caddy_bin_dir}/caddy https://github.com/caddyserver/caddy/releases/download/v1.0.4/caddy_v1.0.4_linux_arm7
-      sucess_or_fail "caddy下载"
-      ;;    
-    *)
-      echo -e "${Error}不支持 [${bit}] ! 请向开发者反馈[]中的名称，会及时添加支持。" && exit 1
-      ;;    
-    esac
-    chmod +x ${caddy_bin_dir}/caddy
-  else
-    echo -e "${Info}caddy已存在，无需安装"
-  fi
+    echo -e "${Info}开始安装caddy……"
+    [[ ! -d ${caddy_bin_dir} ]] && mkdir ${caddy_bin_dir}
+    if [[ ! -f ${caddy_bin_dir}/caddy ]];then
+        case  ${bit} in
+        "x86_64")
+          wget --no-check-certificate -O ${caddy_bin_dir}/caddy_2.1.1_linux_amd64.tar.gz "https://github.com/caddyserver/caddy/releases/download/v2.1.1/caddy_2.1.1_linux_amd64.tar.gz"
+          sucess_or_fail "caddy下载"
+          tar -zxvf ${caddy_bin_dir}/caddy_2.1.1_linux_amd64.tar.gz -C ${caddy_bin_dir}
+          sucess_or_fail "caddy解压"
+          rm -f ${caddy_bin_dir}/caddy_2.1.1_linux_amd64.tar.gz
+          ;;
+        "armv6")
+          wget --no-check-certificate -O ${caddy_bin_dir}/caddy_2.1.1_linux_armv6.tar.gz "https://github.com/caddyserver/caddy/releases/download/v2.1.1/caddy_2.1.1_linux_armv6.tar.gz"
+           sucess_or_fail "caddy下载"
+          tar -zxvf ${caddy_bin_dir}/caddy_2.1.1_linux_armv6.tar.gz -C ${caddy_bin_dir}
+          sucess_or_fail "caddy解压"
+          rm -f ${caddy_bin_dir}/caddy_2.1.1_linux_armv6.tar.gz
+          ;;
+        "armv7l")
+          wget --no-check-certificate -O ${caddy_bin_dir}/caddy_2.1.1_linux_armv7.tar.gz "https://github.com/caddyserver/caddy/releases/download/v2.1.1/caddy_2.1.1_linux_armv7.tar.gz"
+          sucess_or_fail "caddy下载"
+          tar -zxvf ${caddy_bin_dir}/caddy_2.1.1_linux_armv7.tar.gz -C ${caddy_bin_dir}
+          sucess_or_fail "caddy解压"
+          rm -f ${caddy_bin_dir}/caddy_2.1.1_linux_armv7.tar.gz
+          ;;
+        *)
+          echo -e "${Error}不支持 [${bit}] ! 请向Jeannie反馈[]中的名称，会及时添加支持。" && exit 1
+          ;;
+        esac
+    else
+      echo -e "${Info}trojan-go已存在，无需安装"
+    fi
 }
 
 # 配置Caddy
-config_caddy() {
-  domain=$1
-  caddy_trojan_port=$2
-  mkdir -p ${web_dir}/${domain}
-  mkdir -p ${caddy_conf_dir}
-  cat >${caddy_conf} <<-EOF
-${domain} {
-  root * ${web_dir}/${domain}
+caddy_trojan_conf() {
+  [[ ! -d ${caddy_conf_dir} ]] && mkdir ${caddy_conf_dir}
+  [[ ! -f ${caddy_conf} ]] && touch ${caddy_conf}
+  cat >${caddy_conf} <<EOF
+${domain}:${webport} {
+  encode gzip
+  root * ${web_dir}
   file_server
   tls /data/${domain}/fullchain.crt /data/${domain}/privkey.key
+  header X-Real-IP {http.request.remote.host}
+  header X-Forwarded-For {http.request.remote.host}
+  header X-Forwarded-Port {http.request.port}
+  header X-Forwarded-Proto {http.request.scheme}
 }
 EOF
-  systemctl restart caddy
-  sucess_or_fail "Caddy配置"
 }
 
 # 安装Caddy服务
 install_caddy_service() {
-  touch ${caddy_systemd_file}
-  cat >${caddy_systemd_file} <<-EOF
+  echo -e "${Info}开始安装caddy后台管理服务……"
+  cat >${caddy_systemd_file} <<EOF
 [Unit]
-Description=Caddy HTTP/2 web server
-Documentation=https://caddyserver.com/docs
-After=network-online.target
-Wants=network-online.target systemd-networkd-wait-online.service
+Description=Caddy
+Documentation=https://caddyserver.com/docs/
+After=network.target
 
 [Service]
-Restart=on-abnormal
-
-; User and group the process will run as.
 User=root
 Group=root
-
-; Letsencrypt-issued certificates will be written to this directory.
-Environment=CADDYPATH=/data
-
-; Always set "-root" to something safe in case it gets forgotten in the Caddyfile.
-ExecStart=${caddy_bin_dir}/caddy -log stdout -agree=true -conf=${caddy_conf} -root=/var/tmp
-ExecReload=${caddy_bin_dir}/caddy reload
-
-; Use graceful shutdown with a reasonable timeout
-KillMode=mixed
-KillSignal=SIGQUIT
+ExecStart=/usr/bin/caddy/caddy run --environ --config /etc/caddy/Caddyfile
+ExecReload=/usr/bin/caddy/caddy reload --config /etc/caddy/Caddyfile
 TimeoutStopSec=5s
-
-; Limit the number of file descriptors; see 'man systemd.exec' for more limit settings.
 LimitNOFILE=1048576
-; Unmodified caddy is not expected to use more than that.
 LimitNPROC=512
-
-; Use private /tmp and /var/tmp, which are discarded after caddy stops.
 PrivateTmp=true
-; Use a minimal /dev (May bring additional security if switched to 'true', but it may not work on Raspberry Pi's or other devices, so it has been disabled in this dist.)
-PrivateDevices=false
-; Hide /home, /root, and /run/user. Nobody will steal your SSH-keys.
-ProtectHome=true
-; Make /usr, /boot, /etc and possibly some more folders read-only.
 ProtectSystem=full
-; … except /data, because we want Letsencrypt-certificates there. This merely retains r/w access rights, it does not add any new. Must still be writable on the host!
-ReadWritePaths=/data
-
-; The following additional security directives only work with systemd v229 or later.
-; They further restrict privileges that can be gained by caddy. Uncomment if you like.
-; Note that you may have to add capabilities required by any plugins in use.
-;CapabilityBoundingSet=CAP_NET_BIND_SERVICE
-;AmbientCapabilities=CAP_NET_BIND_SERVICE
-;NoNewPrivileges=true
+AmbientCapabilities=CAP_NET_BIND_SERVICE
 
 [Install]
 WantedBy=multi-user.target
@@ -432,19 +425,102 @@ trojan_go_conf() {
     password=$(cat /dev/urandom | head -1 | md5sum | head -c 8)
   fi
   cat >${trojan_conf_file} <<-EOF
-{
+  {
   "run_type": "server",
   "local_addr": "0.0.0.0",
   "local_port": ${trojanport},
   "remote_addr": "127.0.0.1",
-  "remote_port": 80,
-  "password": [
-    "${password}"
-  ],
+  "remote_port": ${webport},
+  "log_level": 1,
+  "log_file": "",
+  "password": ["${password}"],
+  "disable_http_check": false,
+  "udp_timeout": 60,
   "ssl": {
+    "verify": true,
+    "verify_hostname": true,
     "cert": "/data/${domain}/fullchain.crt",
     "key": "/data/${domain}/privkey.key",
-    "fallback_port": 80
+    "key_password": "",
+    "cipher": "",
+    "curves": "",
+    "prefer_server_cipher": false,
+    "sni": "",
+    "alpn": [
+      "http/1.1"
+    ],
+    "session_ticket": true,
+    "reuse_session": true,
+    "plain_http_response": "",
+    "fallback_addr": "",
+    "fallback_port": 0,
+    "fingerprint": "firefox"
+  },
+  "tcp": {
+    "no_delay": true,
+    "keep_alive": true,
+    "prefer_ipv4": false
+  },
+  "mux": {
+    "enabled": false,
+    "concurrency": 8,
+    "idle_timeout": 60
+  },
+  "router": {
+    "enabled": false,
+    "bypass": [],
+    "proxy": [],
+    "block": [],
+    "default_policy": "proxy",
+    "domain_strategy": "as_is",
+    "geoip": "$PROGRAM_DIR$/geoip.dat",
+    "geosite": "$PROGRAM_DIR$/geosite.dat"
+  },
+  "websocket": {
+    "enabled": false,
+    "path": "",
+    "host": ""
+  },
+  "shadowsocks": {
+    "enabled": false,
+    "method": "AES-128-GCM",
+    "password": ""
+  },
+  "transport_plugin": {
+    "enabled": false,
+    "type": "",
+    "command": "",
+    "plugin_option": "",
+    "arg": [],
+    "env": []
+  },
+  "forward_proxy": {
+    "enabled": false,
+    "proxy_addr": "",
+    "proxy_port": 0,
+    "username": "",
+    "password": ""
+  },
+  "mysql": {
+    "enabled": false,
+    "server_addr": "localhost",
+    "server_port": 3306,
+    "database": "",
+    "username": "",
+    "password": "",
+    "check_rate": 60
+  },
+  "api": {
+    "enabled": false,
+    "api_addr": "",
+    "api_port": 0,
+    "ssl": {
+      "enabled": false,
+      "key": "",
+      "cert": "",
+      "verify_client": false,
+      "client_cert": []
+    }
   }
 }
 EOF
@@ -463,7 +539,7 @@ trojan_client_conf(){
   "remote_port": ${webport},
   "log_level": 1,
   "log_file": "",
-   "password": ["${password}"],
+  "password": ["${password}"],
   "disable_http_check": false,
   "udp_timeout": 60,
   "ssl": {
@@ -760,7 +836,8 @@ web_download() {
   sucess_or_fail "伪装网站下载"
   unzip -o -d ${web_dir} ${web_dir}/web.zip
   sucess_or_fail "伪装网站解压"
-  mv ${web_dir}/${static_website_file}/* ${web_dir}
+  mv ${web_dir}/${static_website_file}/* ${web_dir} -rf
+  rm -rf ${web_dir}/${static_website_file}
 }
 
 # 生成Trojan-Go信息HTML页面
@@ -879,16 +956,21 @@ open_websocket(){
   sed -i "54c    \"path\": \"/trojan\"," ${web_dir}/"${uuid}".json
   websocket_path="/trojan"
   websocket_status="开启"
-  ;;
 }
 
 # 主函数
 main() {
+  mux_status="关闭"
+  websocket_path="/trojan"
+  websocket_status="关闭"
   check_root
   check_sys
   sys_cmd
   set_SELINUX
   get_ip
+  # 检查端口是否被占用
+  port_used_check 80
+  port_used_check 443
 
   echo -e "${GREEN}欢迎使用Trojan-Go一键安装脚本${Font}"
   echo -e "${GREEN}==================================${Font}"
@@ -948,7 +1030,7 @@ main() {
     
     # 安装Trojan-Go
     download_install
-    trojan_go_conf
+    trojan_go_conf "${password}"
     trojan_go_systemd
     
     # 下载伪装网站
@@ -959,7 +1041,7 @@ main() {
     [[ -f ${web_dir}/${domain}/web.zip ]] && rm -rf ${web_dir}/${domain}/web.zip
     
     # 配置Caddy
-    config_caddy
+    caddy_trojan_conf
     
     # 生成客户端配置
     client_config=$(cat ${trojan_conf_file} | sed 's/\n/\\n/g')
@@ -1033,7 +1115,7 @@ main() {
     [[ -f ${web_dir}/${domain}/web.zip ]] && rm -rf ${web_dir}/${domain}/web.zip
     
     # 配置Caddy
-    config_caddy
+    caddy_trojan_conf
     
     # 生成客户端配置
     client_config=$(cat ${trojan_conf_file} | sed 's/\n/\\n/g')

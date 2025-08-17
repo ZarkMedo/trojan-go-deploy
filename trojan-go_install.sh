@@ -636,7 +636,7 @@ trojan_client_conf(){
   "remote_port": ${webport},
   "log_level": 1,
   "log_file": "",
-   "password": ["${password}"],
+  "password": ["${password}"],
   "disable_http_check": false,
   "udp_timeout": 60,
   "ssl": {
