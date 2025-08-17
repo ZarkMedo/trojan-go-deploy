@@ -5,6 +5,12 @@
 #	Version: 1.0.0
 #	Author: ZarkMedo
 #=================================================
+# 使用方法：
+# 1. 交互式安装: bash trojan_caddy_install_and_bbr.sh
+# 2. 命令行参数安装: bash trojan_caddy_install_and_bbr.sh [域名] [Caddy端口] [Trojan端口] [密码]
+#    例如: bash trojan_caddy_install_and_bbr.sh example.com 0 443 password
+#    注意: 当Caddy端口设为0时，将随机生成一个端口
+#=================================================
 sh_ver="1.0.0"
 #fonts color
 RED="\033[0;31m"
@@ -19,7 +25,7 @@ Font="\033[0m"
 Green_font_prefix="\033[32m" && Red_font_prefix="\033[31m" && Green_background_prefix="\033[42;37m" && Red_background_prefix="\033[41;37m" && Font_color_suffix="\033[0m"
 Info="${Green_font_prefix}[信息]${Font_color_suffix}"
 Error="${Red_font_prefix}[错误]${Font_color_suffix}"
-Tip="${Green_font_prefix}[注意]${Font_color_suffix}"
+Tip="${Green_font_prefix}[提示]${Font_color_suffix}"
 trojan_dir=/etc/trojan
 trojan_bin_dir=${trojan_dir}/bin
 trojan_conf_dir=${trojan_dir}/conf
@@ -868,15 +874,101 @@ main() {
 
   echo -e "${GREEN}欢迎使用Trojan-Go一键安装脚本${Font}"
   echo -e "${GREEN}==================================${Font}"
-  echo -e "1. 安装Trojan-Go + Caddy + BBR"
-  echo -e "2. 卸载所有组件"
-  echo -e "3. 仅安装BBR"
-  echo -e "4. 查看Trojan-Go配置信息"
-  echo -e "=================================="
   
-  read -rp "请输入数字[1-4]：" menu_num
-  case $menu_num in
-  1)
+  # 检查是否有命令行参数
+  if [ $# -ge 1 ]; then
+    # 通过命令行参数直接部署
+    # 参数1: 域名
+    domain=$1
+    check_domain "${domain}"
+    
+    # 参数2: Caddy端口，如果为0则随机生成
+    if [ -n "$2" ]; then
+      caddy_trojan_port=$2
+      if [ "$caddy_trojan_port" -eq 0 ]; then
+        caddy_trojan_port=$(shuf -i 10000-65000 -n 1)
+        echo -e "${Info}随机生成Caddy端口: ${caddy_trojan_port}"
+      fi
+    else
+      caddy_trojan_port=80
+    fi
+    
+    # 参数3: Trojan端口
+    if [ -n "$3" ]; then
+      trojanport=$3
+    else
+      trojanport=443
+    fi
+    
+    # 参数4: 密码
+    if [ -n "$4" ]; then
+      password=$4
+    else
+      password=$(cat /dev/urandom | head -1 | md5sum | head -c 8)
+      echo -e "${Info}随机生成密码: ${password}"
+    fi
+    
+    webport=$caddy_trojan_port
+    
+    # 安装依赖
+    install_dependency
+    close_firewall
+    open_port
+    
+    # 安装TLS证书
+    tls_generate_script_install
+    tls_generate
+    
+    # 安装Caddy
+    install_caddy
+    install_caddy_service
+    
+    # 安装Trojan-Go
+    download_install
+    trojan_go_conf
+    trojan_go_systemd
+    
+    # 下载伪装网站
+    mkdir -p ${web_dir}/${domain}
+    web_download 1
+    # 移动网站文件到域名目录
+    mv ${web_dir}/* ${web_dir}/${domain}/ 2>/dev/null
+    [[ -f ${web_dir}/${domain}/web.zip ]] && rm -rf ${web_dir}/${domain}/web.zip
+    
+    # 配置Caddy
+    config_caddy
+    
+    # 生成客户端配置
+    client_config=$(cat ${trojan_conf_file} | sed 's/\n/\\n/g')
+    trojan_client_conf
+    trojan_go_qr_config
+    
+    # 生成二维码
+    cd ${web_dir}/${domain} || exit
+    qrencode -o ${uuid}.png -s 8 "trojan://${password}@${domain}:${trojanport}"
+    
+    # 生成信息页面
+    trojan_go_info_html
+    
+    # 下载管理脚本
+    download_trojan_mgr
+    
+    # 启动服务
+    systemctl enable trojan.service
+    systemctl start trojan.service
+    systemctl enable caddy.service
+    systemctl start caddy.service
+    
+    # 启用BBR
+    enableBBRSysctlConfigDefault
+    
+    # 显示安装信息
+    trojan_go_basic_information
+  else
+    # 交互式菜单
+    echo -e "1. 安装Trojan-Go + Caddy + BBR"
+    echo -e "=================================="
+    
     # 设置域名
     read -rp "请输入你的域名(必须已解析到本机IP): " domain
     [[ -z ${domain} ]] && domain="example.com"
@@ -911,14 +1003,14 @@ main() {
     trojan_go_systemd
     
     # 下载伪装网站
-     mkdir -p ${web_dir}/${domain}
-     web_download 1
-     # 移动网站文件到域名目录
-     mv ${web_dir}/* ${web_dir}/${domain}/ 2>/dev/null
-     [[ -f ${web_dir}/${domain}/web.zip ]] && rm -rf ${web_dir}/${domain}/web.zip
+    mkdir -p ${web_dir}/${domain}
+    web_download 1
+    # 移动网站文件到域名目录
+    mv ${web_dir}/* ${web_dir}/${domain}/ 2>/dev/null
+    [[ -f ${web_dir}/${domain}/web.zip ]] && rm -rf ${web_dir}/${domain}/web.zip
     
     # 配置Caddy
-     config_caddy
+    config_caddy
     
     # 生成客户端配置
     client_config=$(cat ${trojan_conf_file} | sed 's/\n/\\n/g')
@@ -946,25 +1038,7 @@ main() {
     
     # 显示安装信息
     trojan_go_basic_information
-    ;;
-  2)
-    uninstall_all
-    ;;
-  3)
-    enableBBRSysctlConfigDefault
-    echo -e "${Info}BBR安装完成！"
-    ;;
-  4)
-    if [[ -f ${trojan_conf_file} ]]; then
-      trojan_go_basic_information
-    else
-      echo -e "${Error}未安装Trojan-Go！"
-    fi
-    ;;
-  *)
-    echo -e "${Error}请输入正确的数字[1-4]"
-    ;;
-  esac
+  fi
 }
 
 # 执行主函数
