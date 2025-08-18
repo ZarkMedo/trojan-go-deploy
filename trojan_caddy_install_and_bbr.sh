@@ -907,9 +907,6 @@ main() {
   sys_cmd
   set_SELINUX
   get_ip
-  # 检查端口是否被占用
-  port_used_check 80
-  port_used_check 443
 
   echo -e "${GREEN}欢迎使用Trojan-Go一键安装脚本${Font}"
   echo -e "${GREEN}==================================${Font}"
@@ -942,6 +939,8 @@ main() {
         echo -e "${Info}随机生成trojan端口: ${trojanport}"
     fi
     echo -e "${Info}参数3: Trojan端口=> trojanport: ${trojanport}"
+    # 检查端口是否被占用
+    port_used_check "${trojanport}"
     
     # 参数4: 密码
     if [ -n "$4" ]; then
@@ -953,6 +952,7 @@ main() {
     echo -e "${Info}参数4: 密码=> password: ${password}"
     
     webport=$caddy_trojan_port
+    port_used_check "${webport}"
     
     # 安装依赖
     install_dependency
