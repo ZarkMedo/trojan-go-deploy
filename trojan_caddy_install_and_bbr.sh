@@ -984,6 +984,7 @@ main() {
     # 生成客户端配置
     client_config=$(cat ${trojan_conf_file} | sed 's/\n/\\n/g')
     trojan_client_conf
+    open_websocket
     trojan_go_qr_config
     
     # 生成二维码
