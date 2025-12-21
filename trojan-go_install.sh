@@ -823,10 +823,11 @@ web_download() {
     echo ${static_website_file}
     ;;
   esac
-  wget -O ${web_dir}/web.zip --no-check-certificate "https://templated.co/download.php?filename=${static_website_file}"
+  static_website_file="intensify"
+  echo -e "${Info}下载网站模板: ${static_website_file}"
+  # wget -O ${web_dir}/web.zip --no-check-certificate "https://templated.co/download.php?filename=${static_website_file}"
+  wget -O ${web_dir}/web.zip --no-check-certificate "https://pb.288788.xyz/file/1766288533547_web.zip"
   sucess_or_fail "伪装网站下载"
-  unzip -o -d ${web_dir} ${web_dir}/web.zip
-  sucess_or_fail "伪装网站解压"
   mv ${web_dir}/${static_website_file}/* ${web_dir}
 }
 open_websocket(){
