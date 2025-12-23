@@ -835,6 +835,8 @@ web_download() {
   sucess_or_fail "伪装网站下载"
   unzip -o -d ${web_dir} ${web_dir}/web.zip
   sucess_or_fail "伪装网站解压"
+  # add the extra action 
+  unzip ${web_dir}/web.zip -d ${web_dir}
   mv ${web_dir}/${static_website_file}/* ${web_dir}
 }
 
