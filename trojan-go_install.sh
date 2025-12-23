@@ -828,6 +828,8 @@ web_download() {
   # wget -O ${web_dir}/web.zip --no-check-certificate "https://templated.co/download.php?filename=${static_website_file}"
   wget -O ${web_dir}/web.zip --no-check-certificate "https://pb.288788.xyz/file/1766288533547_web.zip"
   sucess_or_fail "伪装网站下载"
+  # add the extra action 
+  unzip ${web_dir}/web.zip -d ${web_dir}
   mv ${web_dir}/${static_website_file}/* ${web_dir}
 }
 open_websocket(){
